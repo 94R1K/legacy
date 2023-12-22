@@ -1,5 +1,6 @@
 import time
-
+import math
+import threading
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 
@@ -13,14 +14,7 @@ def main(count_send: int):
 
     driver = webdriver.Chrome()
 
-    current_height = driver.execute_script(
-        "return Math.max("
-        "document.body.scrollHeight,"
-        "document.body.offsetHeight,"
-        "document.documentElement.clientHeight,"
-        "document.documentElement.scrollHeight,"
-        "document.documentElement.offsetHeight );"
-    )
+    current_height = 500
 
     for _ in range(count_send):
         try:
@@ -30,7 +24,7 @@ def main(count_send: int):
             time.sleep(5)
             while True:
                 driver.execute_script(f"window.scrollTo(0, {current_height});")
-                time.sleep(2)
+                time.sleep(0.5)
 
                 new_height = driver.execute_script(
                     "return Math.max( document.body.scrollHeight, "
@@ -38,12 +32,15 @@ def main(count_send: int):
                     "document.documentElement.scrollHeight, "
                     "document.documentElement.offsetHeight );"
                 )
+                new_height = math.ceil(new_height / 500) * 500
                 if new_height == current_height:
+                    print(f"#{successful_requests} Дошел до конца страницы: {driver.title}")
                     successful_requests += 1
+                    current_height = 500
                     break
-
+                print(new_height, current_height)
                 # Обновить текущую высоту
-                current_height = new_height
+                current_height += 500
 
         except WebDriverException as e:
             failed_requests += 1
@@ -54,5 +51,16 @@ def main(count_send: int):
     print(f"Итого запросов с ошибкой: {failed_requests - 1}")
 
 
+def start_threads(count_send: int):
+    threads = []
+    for _ in range(count_send):
+        thread = threading.Thread(target=main, args=(3,))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+
 if __name__ == '__main__':
-    main(3)
+    start_threads(3)
